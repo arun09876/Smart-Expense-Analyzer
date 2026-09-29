@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card shadow-sm text-center"><div class="card-body p-5">
+      <h1 class="h5 mb-4">{{ statement.original_name }}</h1>
+      <div id="working" class="{% if statement.status == 'done' or statement.status == 'failed' %}d-none{% endif %}">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <p class="lead mb-1">Processing…</p>
+        <p id="progress" class="text-muted">{{ statement.progress|default:"Queued" }}</p>
+      </div>
+      <div id="done" class="{% if statement.status != 'done' %}d-none{% endif %}">
+        <i class="bi bi-check-circle-fill text-success display-4"></i>
+        <p class="lead mt-3"><span id="rows">{{ statement.row_count }}</span> transactions analysed.</p>
+        <a href="{% url 'dashboard' %}" class="btn btn-primary">View dashboard</a>
+      </div>
+      <div id="failed" class="{% if statement.status != 'failed' %}d-none{% endif %}">
+        <i class="bi bi-x-circle-fill text-danger display-4"></i>
+        <p class="mt-3" id="error">{{ statement.error }}</p>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Try another file</a>
+      </div>
+    </div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const show = (id) => ["working", "done", "failed"].forEach(x => document.getElementById(x).classList.toggle("d-none", x !== id));
+  async function poll() {
+    const r = await fetch(location.href, { headers: { Accept: "application/json" } });
+    const s = await r.json();
+    if (s.status === "done") { document.getElementById("rows").textContent = s.rows; show("done"); return; }
+    if (s.status === "failed") { document.getElementById("error").textContent = s.error; show("failed"); return; }
+    document.getElementById("progress").textContent = s.progress || "Queued";
+    setTimeout(poll, 1500);
+  }
+  {% if statement.status != 'done' and statement.status != 'failed' %}poll();{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,10 @@
+Django>=5.1,<5.3
+dj-database-url>=2.2
+python-dotenv>=1.0
+celery>=5.4
+redis>=5.0
+pandas>=2.2
+matplotlib>=3.8
+pdfplumber>=0.11
+anthropic>=0.70
+gunicorn>=22.0

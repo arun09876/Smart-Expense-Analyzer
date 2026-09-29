@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block content %}
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <form method="post" action="{% url 'upload' %}" enctype="multipart/form-data" class="row g-2 align-items-center">{% csrf_token %}
+      <div class="col-md"><input type="file" name="file" accept=".csv,.pdf" class="form-control" required></div>
+      <div class="col-md-auto"><button class="btn btn-primary"><i class="bi bi-upload"></i> Analyze statement</button></div>
+      <div class="col-12 small text-muted"><i class="bi bi-shield-lock"></i> CSV or PDF up to {{ max_mb }} MB. Your file is processed in memory and <strong>never stored</strong>. Only the extracted transactions are kept, and you can delete them anytime.</div>
+    </form>
+  </div>
+</div>
+
+{% if s %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="card stat shadow-sm"><div class="card-body"><div class="small text-muted">Total spent</div><div class="value">₹{{ s.total_spend|floatformat:0|intcomma }}</div><div class="small text-muted">{{ s.months }} month{{ s.months|pluralize }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card stat shadow-sm"><div class="card-body"><div class="small text-muted">Avg / month</div><div class="value">₹{{ s.avg_monthly_spend|floatformat:0|intcomma }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card stat shadow-sm"><div class="card-body"><div class="small text-muted">Money in</div><div class="value text-success">₹{{ s.total_income|floatformat:0|intcomma }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card stat shadow-sm"><div class="card-body"><div class="small text-muted">Biggest category</div><div class="value text-danger fs-5 mt-2">{{ s.top_category|default:"—" }}</div></div></div></div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-8"><div class="card shadow-sm h-100"><div class="card-body"><img class="img-fluid" src="{% url 'chart' 'monthly' %}" alt="Monthly spending chart"></div></div></div>
+  <div class="col-lg-4"><div class="card shadow-sm h-100"><div class="card-body"><img class="img-fluid" src="{% url 'chart' 'categories' %}" alt="Category split chart"></div></div></div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-6"><div class="card shadow-sm h-100"><div class="card-body"><img class="img-fluid" src="{% url 'chart' 'merchants' %}" alt="Top merchants chart"></div></div></div>
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header fw-semibold"><i class="bi bi-arrow-repeat"></i> Recurring payments</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead class="table-light"><tr><th>Merchant</th><th>Every</th><th class="text-end">Amount</th><th>Next expected</th></tr></thead>
+          <tbody>
+          {% for r in s.recurring %}
+            <tr><td>{{ r.merchant }}</td><td>{{ r.frequency }}</td><td class="text-end">₹{{ r.amount|floatformat:0|intcomma }}</td><td>{{ r.next_expected|date:"d M" }}</td></tr>
+          {% empty %}<tr><td colspan="4" class="text-muted text-center py-3">No recurring payments detected yet (needs 3+ similar payments).</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+  <i class="bi bi-file-earmark-spreadsheet display-4"></i>
+  <p class="mt-3">Upload your bank statement to see where your money goes.<br><small>Tip: try <code>sample_data/sample_statement.csv</code> from the repo.</small></p>
+</div>
+{% endif %}
+
+{% if statements %}
+<h2 class="h5">Your uploads</h2>
+<div class="card shadow-sm"><ul class="list-group list-group-flush">
+  {% for st in statements %}
+  <li class="list-group-item d-flex align-items-center gap-2">
+    <i class="bi bi-file-earmark-{% if st.file_type == 'pdf' %}pdf{% else %}spreadsheet{% endif %}"></i>
+    <a href="{% url 'statement_status' st.pk %}" class="me-auto">{{ st.original_name }}</a>
+    <span class="small text-muted">{% if st.period_start %}{{ st.period_start|date:"d M" }} – {{ st.period_end|date:"d M Y" }} · {% endif %}{{ st.row_count }} txns{% if st.llm_categorized %} · {{ st.llm_categorized }} by AI{% endif %}</span>
+    <span class="badge {% if st.status == 'done' %}text-bg-success{% elif st.status == 'failed' %}text-bg-danger{% else %}text-bg-warning{% endif %}">{{ st.get_status_display }}</span>
+    <form method="post" action="{% url 'statement_delete' st.pk %}" onsubmit="return confirm('Delete this statement and its transactions?')">{% csrf_token %}<button class="btn btn-sm btn-link text-danger"><i class="bi bi-trash"></i></button></form>
+  </li>
+  {% endfor %}
+</ul></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Sign up · Expense Analyzer{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">Create your account</h1>
+        <form method="post">{% csrf_token %}
+          {% for field in form %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                     value="{{ field.value|default_if_none:'' }}" class="form-control {% if field.errors %}is-invalid{% endif %}">
+              {% for e in field.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+          {% endfor %}
+          <button class="btn btn-dark w-100">Sign up</button>
+        </form>
+        <p class="mt-3 mb-0 text-center">Have an account? <a href="{% url 'login' %}">Log in</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
